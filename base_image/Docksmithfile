@@ -1,0 +1,3 @@
+WORKDIR /
+CMD ["python3"]
+

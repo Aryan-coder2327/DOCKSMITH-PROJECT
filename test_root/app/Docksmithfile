@@ -1,0 +1,9 @@
+FROM base:latest
+WORKDIR /app
+ENV NAME=Docksmith
+COPY usr /usr
+COPY bin /bin
+COPY lib /lib
+COPY . /app
+RUN echo build complete
+CMD ["python3","app.py"]
