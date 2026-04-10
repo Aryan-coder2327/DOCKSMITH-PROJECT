@@ -1,4 +1,4 @@
+test_root/
+test_layer/
+base_layer/
 __pycache__/
-*.pyc
-.docksmith/
-.DS_Store
