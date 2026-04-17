@@ -29,7 +29,7 @@ def list_images():
 
         name = data.get("name", "")
         tag = data.get("tag", "")
-        digest = data.get("digest", "none")[:12]
+        digest = data.get("digest", "none").replace("sha256:", "")[:12]
         created = data.get("created", "")
 
         print(f"{name}\t{tag}\t{digest}\t{created}")

@@ -18,10 +18,13 @@ def remove_image(image):
 
     manifest = json.load(open(image_file))
 
-    # remove layer files
     for layer in manifest.get("layers", []):
 
         digest = layer if isinstance(layer, str) else layer["digest"]
+
+        # strip sha256: prefix if present
+        if isinstance(digest, str) and digest.startswith("sha256:"):
+            digest = digest[len("sha256:"):]
 
         path = os.path.join(LAYERS, "sha256:" + digest + ".tar")
 
@@ -43,11 +46,11 @@ def main():
 
     build = sub.add_parser("build")
     build.add_argument("-t")
+    build.add_argument("--no-cache", action="store_true", dest="no_cache")
     build.add_argument("context")
 
     run = sub.add_parser("run")
     run.add_argument("image")
-    run.add_argument("command", nargs="*")
     run.add_argument("-e", action="append")
 
     sub.add_parser("images")
@@ -55,13 +58,13 @@ def main():
     rmi = sub.add_parser("rmi")
     rmi.add_argument("image")
 
-    args = parser.parse_args()
+    args, remaining = parser.parse_known_args()
 
     if args.cmd == "build":
-        build_image(args.t, args.context)
+        build_image(args.t, args.context, args.no_cache)
 
     elif args.cmd == "run":
-        run_container(args.image, args.command, args.e)
+        run_container(args.image, remaining, args.e)
 
     elif args.cmd == "images":
         list_images()

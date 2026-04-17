@@ -25,13 +25,16 @@ def run_container(image, command, env_vars):
         # assemble filesystem
         for layer in manifest.get("layers", []):
 
-            digest = layer["digest"].split(":")[1]
+            digest = layer["digest"]
+
+            if digest.startswith("sha256:"):
+                digest = digest[len("sha256:"):]
 
             tar_path = os.path.join(LAYERS, "sha256:" + digest + ".tar")
 
+            # skip sentinel or missing layers gracefully
             if not os.path.exists(tar_path):
-                print("Missing layer:", digest)
-                return
+                continue
 
             with tarfile.open(tar_path) as tar:
                 tar.extractall(root)
@@ -46,35 +49,38 @@ def run_container(image, command, env_vars):
             print("Error: no CMD defined and no command provided")
             return
 
-        env = os.environ.copy()
+        # build env from image config
+        env = {}
 
-        # apply ENV from image
         for e in manifest.get("config", {}).get("Env", []):
             k, v = e.split("=", 1)
             env[k] = v
 
-        # apply overrides
+        # apply -e overrides
         if env_vars:
             for e in env_vars:
                 k, v = e.split("=", 1)
                 env[k] = v
 
+        # inject env into chroot shell
+        env_exports = " ".join(f"export {k}={v};" for k, v in env.items())
+
         workdir = manifest.get("config", {}).get("WorkingDir", "/")
 
         print("Running container...")
 
-        # execute inside chroot
-        subprocess.run(
+        result = subprocess.run(
             [
                 "sudo",
                 "chroot",
                 root,
                 "/bin/sh",
                 "-c",
-                f"cd {workdir} && {' '.join(cmd)}"
-            ],
-            env=env
+                f"{env_exports} cd {workdir} && {' '.join(cmd)}"
+            ]
         )
+
+        print(f"Container exited with code {result.returncode}")
 
     finally:
         shutil.rmtree(root, ignore_errors=True)
